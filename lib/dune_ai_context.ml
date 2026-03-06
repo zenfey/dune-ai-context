@@ -77,21 +77,11 @@ let rec find_cmi_files (dir : string) (target : string) : string list =
       [] entries
   with Sys_error _ -> []  (* directory does not exist or cannot be read *)
 
-(** Check at runtime that the external tool `ocaml-print-intf` is available. *)
-let check_ocaml_print_intf () =
-  match Sys.command "ocaml-print-intf -version" with
-  | 0 -> ()
-  | _ ->
-      eprintf "Error: ocaml-print-intf not found in PATH.\n";
-      exit 1
-
 (** [print_vendor_dependencies ()] parses the project's Dune files (bin/dune,
     lib/dune, test/dune), extracts the library dependencies, deduplicates them,
     and for each dependency prints the library name followed by any found .cmi
     file paths and the information obtained from `Cmi_format.read_cmi`. *)
 let print_vendor_dependencies () =
-  (* Ensure the required external tool is present *)
-  check_ocaml_print_intf ();
   let dune_files = [ "bin/dune"; "lib/dune"; "test/dune" ] in
   let deps =
     List.fold_left
@@ -119,8 +109,8 @@ let print_vendor_dependencies () =
              List.iter
                (fun p ->
                   let info = Cmi_format.read_cmi p in
-                  (* Assuming `info` can be converted to a string; if it's already a string, this works.
-                     If it's a more complex type, you may need to adjust the printing accordingly. *)
+                  (* Convert the info to a string for printing. Adjust as needed
+                     depending on the actual type returned by `read_cmi`. *)
                   printf "%s %s %s\n" dep p (Stdlib.string_of_int (Obj.magic info : int)))
                cmi_paths)
         uniq_deps
