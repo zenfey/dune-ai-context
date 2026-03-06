@@ -1,7 +1,9 @@
 (* lib/dune_ai_context.ml
    This module provides functionality to parse Dune stanza files
    (bin/dune, lib/dune, test/dune) and extract the list of library dependencies.
-   It then prints the dependencies to the standard output.
+   It then prints the dependencies, searches for the corresponding .cmi files
+   in the OPAM_SWITCH_PREFIX/lib directory, and prints the paths of any found
+   .cmi files.
 
    Missing Dune files are ignored, so the code works for projects that only
    have a lib, only have a bin, or have additional test stanzas.
@@ -57,9 +59,27 @@ let dedup (lst : string list) : string list =
        else (Hashtbl.add tbl x (); true))
     lst
 
+(** Recursively search for .cmi files named [target] under [dir]. *)
+let rec find_cmi_files (dir : string) (target : string) : string list =
+  try
+    let entries = Sys.readdir dir in
+    Array.fold_left
+      (fun acc entry ->
+         let path = Filename.concat dir entry in
+         if Sys.is_directory path then
+           acc @ find_cmi_files path target
+         else if Filename.check_suffix entry ".cmi" then
+           let base = Filename.chop_suffix entry ".cmi" in
+           if base = target then path :: acc else acc
+         else acc)
+      [] entries
+  with Sys_error _ -> []  (* directory does not exist or cannot be read *)
+
 (** [print_vendor_dependencies ()] parses the project's Dune files (bin/dune,
     lib/dune, test/dune), extracts the library dependencies, deduplicates them,
-    and prints each one on its own line. Missing files are silently ignored. *)
+    prints each dependency, then looks for the corresponding .cmi files in the
+    OPAM_SWITCH_PREFIX/lib directory and prints any found paths. Missing files
+    are silently ignored. *)
 let print_vendor_dependencies () =
   let dune_files = [ "bin/dune"; "lib/dune"; "test/dune" ] in
   let deps =
@@ -71,4 +91,15 @@ let print_vendor_dependencies () =
       [] dune_files
   in
   let uniq_deps = dedup deps in
-  List.iter (printf "%s\n") uniq_deps
+  (* Print the vendor library names *)
+  List.iter (printf "%s\n") uniq_deps;
+  (* Locate and print .cmi files if OPAM_SWITCH_PREFIX is set *)
+  match Sys.getenv_opt "OPAM_SWITCH_PREFIX" with
+  | None -> ()
+  | Some prefix ->
+      let lib_dir = Filename.concat prefix "lib" in
+      List.iter
+        (fun dep ->
+           let cmi_paths = find_cmi_files lib_dir dep in
+           List.iter (fun p -> printf "CMI: %s\n" p) cmi_paths)
+        uniq_deps

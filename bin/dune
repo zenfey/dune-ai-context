@@ -1,4 +1,4 @@
 (executable
  (public_name dune-ai-context)
  (name dune_ai_context)
- (libraries dune_ai_context str))
+ (libraries dune_ai_context str unix))
