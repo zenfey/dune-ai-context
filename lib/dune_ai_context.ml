@@ -1,10 +1,10 @@
 (* lib/dune_ai_context.ml
    This module provides functionality to parse Dune stanza files
-   (bin/dune and lib/dune) and extract the list of library dependencies.
-   It then prints those dependencies to the standard output.
+   (bin/dune, lib/dune, test/dune) and extract the list of library dependencies.
+   It then prints the dependencies to the standard output.
 
-   The parsing is intentionally simple: it looks for the "(libraries ...)"
-   stanza and extracts the identifiers inside the parentheses.
+   Missing Dune files are ignored, so the code works for projects that only
+   have a lib, only have a bin, or have additional test stanzas.
 *)
 
 open Printf
@@ -17,6 +17,10 @@ let read_file (path : string) : string =
   let content = really_input_string ic len in
   close_in ic;
   content
+
+(** [read_file_opt path] returns [Some content] if the file exists, otherwise [None]. *)
+let read_file_opt (path : string) : string option =
+  if Sys.file_exists path then Some (read_file path) else None
 
 (** [extract_libraries content] returns a list of library names found in a Dune file
     content. It searches for occurrences of "(libraries ...)" and splits the
@@ -53,14 +57,18 @@ let dedup (lst : string list) : string list =
        else (Hashtbl.add tbl x (); true))
     lst
 
-(** [print_vendor_dependencies ()] parses the project's bin/dune and lib/dune files,
-    extracts the library dependencies, deduplicates them, and prints each one
-    on its own line. *)
+(** [print_vendor_dependencies ()] parses the project's Dune files (bin/dune,
+    lib/dune, test/dune), extracts the library dependencies, deduplicates them,
+    and prints each one on its own line. Missing files are silently ignored. *)
 let print_vendor_dependencies () =
-  let bin_dune = "bin/dune" in
-  let lib_dune = "lib/dune" in
-  let bin_content = read_file bin_dune in
-  let lib_content = read_file lib_dune in
-  let deps = extract_libraries bin_content @ extract_libraries lib_content in
+  let dune_files = [ "bin/dune"; "lib/dune"; "test/dune" ] in
+  let deps =
+    List.fold_left
+      (fun acc path ->
+         match read_file_opt path with
+         | Some content -> extract_libraries content @ acc
+         | None -> acc)
+      [] dune_files
+  in
   let uniq_deps = dedup deps in
   List.iter (printf "%s\n") uniq_deps
