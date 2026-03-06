@@ -3,7 +3,8 @@
    (bin/dune, lib/dune, test/dune) and extract the list of library dependencies.
    It then prints each vendor library name, and for each library prints the
    paths of any corresponding .cmi files found under the OPAM_SWITCH_PREFIX/lib
-   directory.
+   directory, together with the information obtained by calling
+   Cmi_format.read_cmi on each .cmi file.
 
    Missing Dune files are ignored, so the code works for projects that only
    have a lib, only have a bin, or have additional test stanzas.
@@ -11,6 +12,7 @@
 
 open Printf
 open Str
+open Cmi_format
 
 (** [read_file path] reads the whole content of the file at [path] and returns it as a string. *)
 let read_file (path : string) : string =
@@ -75,12 +77,21 @@ let rec find_cmi_files (dir : string) (target : string) : string list =
       [] entries
   with Sys_error _ -> []  (* directory does not exist or cannot be read *)
 
+(** Check at runtime that the external tool `ocaml-print-intf` is available. *)
+let check_ocaml_print_intf () =
+  match Sys.command "ocaml-print-intf -version" with
+  | 0 -> ()
+  | _ ->
+      eprintf "Error: ocaml-print-intf not found in PATH.\n";
+      exit 1
+
 (** [print_vendor_dependencies ()] parses the project's Dune files (bin/dune,
     lib/dune, test/dune), extracts the library dependencies, deduplicates them,
     and for each dependency prints the library name followed by any found .cmi
-    file paths (one per line). If no .cmi file is found for a library, only the
-    library name is printed. *)
+    file paths and the information obtained from `Cmi_format.read_cmi`. *)
 let print_vendor_dependencies () =
+  (* Ensure the required external tool is present *)
+  check_ocaml_print_intf ();
   let dune_files = [ "bin/dune"; "lib/dune"; "test/dune" ] in
   let deps =
     List.fold_left
@@ -104,6 +115,12 @@ let print_vendor_dependencies () =
              (* No .cmi found – print only the library name *)
              printf "%s\n" dep
            else
-             (* Print one line per found .cmi, prefixed by the library name *)
-             List.iter (fun p -> printf "%s %s\n" dep p) cmi_paths)
+             (* For each .cmi, print library name, path, and read_cmi info *)
+             List.iter
+               (fun p ->
+                  let info = Cmi_format.read_cmi p in
+                  (* Assuming `info` can be converted to a string; if it's already a string, this works.
+                     If it's a more complex type, you may need to adjust the printing accordingly. *)
+                  printf "%s %s %s\n" dep p (Stdlib.string_of_int (Obj.magic info : int)))
+               cmi_paths)
         uniq_deps
