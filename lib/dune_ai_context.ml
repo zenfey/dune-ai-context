@@ -1,9 +1,9 @@
 (* lib/dune_ai_context.ml
    This module provides functionality to parse Dune stanza files
    (bin/dune, lib/dune, test/dune) and extract the list of library dependencies.
-   It then prints the dependencies, searches for the corresponding .cmi files
-   in the OPAM_SWITCH_PREFIX/lib directory, and prints the paths of any found
-   .cmi files.
+   It then prints each vendor library name, and for each library prints the
+   paths of any corresponding .cmi files found under the OPAM_SWITCH_PREFIX/lib
+   directory.
 
    Missing Dune files are ignored, so the code works for projects that only
    have a lib, only have a bin, or have additional test stanzas.
@@ -77,9 +77,9 @@ let rec find_cmi_files (dir : string) (target : string) : string list =
 
 (** [print_vendor_dependencies ()] parses the project's Dune files (bin/dune,
     lib/dune, test/dune), extracts the library dependencies, deduplicates them,
-    prints each dependency, then looks for the corresponding .cmi files in the
-    OPAM_SWITCH_PREFIX/lib directory and prints any found paths. Missing files
-    are silently ignored. *)
+    and for each dependency prints the library name followed by any found .cmi
+    file paths (one per line). If no .cmi file is found for a library, only the
+    library name is printed. *)
 let print_vendor_dependencies () =
   let dune_files = [ "bin/dune"; "lib/dune"; "test/dune" ] in
   let deps =
@@ -91,15 +91,19 @@ let print_vendor_dependencies () =
       [] dune_files
   in
   let uniq_deps = dedup deps in
-  (* Print the vendor library names *)
-  List.iter (printf "%s\n") uniq_deps;
-  (* Locate and print .cmi files if OPAM_SWITCH_PREFIX is set *)
   match Sys.getenv_opt "OPAM_SWITCH_PREFIX" with
-  | None -> ()
+  | None ->
+      (* No OPAM switch prefix; just print the library names *)
+      List.iter (printf "%s\n") uniq_deps
   | Some prefix ->
       let lib_dir = Filename.concat prefix "lib" in
       List.iter
         (fun dep ->
            let cmi_paths = find_cmi_files lib_dir dep in
-           List.iter (fun p -> printf "CMI: %s\n" p) cmi_paths)
+           if cmi_paths = [] then
+             (* No .cmi found – print only the library name *)
+             printf "%s\n" dep
+           else
+             (* Print one line per found .cmi, prefixed by the library name *)
+             List.iter (fun p -> printf "%s %s\n" dep p) cmi_paths)
         uniq_deps
