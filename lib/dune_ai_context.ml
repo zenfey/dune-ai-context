@@ -64,15 +64,18 @@ let run_dune_describe () : string =
 let rec extract_external_deps (sexp : t) : string list =
   match sexp with
   | List (_default :: libs) ->
+      (* `libs` is a list of library specifications *)
       List.concat_map
         (function
           | List fields ->
+              (* Find the field whose first atom is "external_deps" *)
               (match List.find_opt
                        (function
-                         | List ((Atom "external_deps") :: _) -> true
+                         | List (Atom "external_deps" :: _) -> true
                          | _ -> false)
                        fields with
-               | Some (List ((_atom :: deps) :: _)) ->
+               | Some (List (_atom :: deps)) ->
+                   (* `deps` is a list like ((core required) (str required) ...) *)
                    List.fold_left
                      (fun acc -> function
                        | List [Atom name; _required] -> name :: acc
