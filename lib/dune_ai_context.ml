@@ -119,3 +119,13 @@ let print_vendor_dependencies () =
                   Format.printf "%a\n" Printtyp.signature cmi.cmi_sign)
                cmi_paths)
         deps
+
+(* Inline test for [extract_external_deps] *)
+let%test "extract_external_deps parses external_deps correctly" =
+  let s =
+    "(default\n ((library\n   ((names (inst))\n    (extensions ())\n    (package (inst))\n    (source_dir lib)\n    (external_deps\n     ((core required)\n      (str required)\n      (ppx_jane required)\n      (ppx_deriving_yojson required)))\n    (internal_deps ())))))"
+  in
+  let sexp = Sexplib.Sexp.of_string s in
+  let deps = extract_external_deps sexp in
+  let expected = ["core"; "str"; "ppx_jane"; "ppx_deriving_yojson"] in
+  List.sort String.compare deps = List.sort String.compare expected
