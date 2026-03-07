@@ -1,5 +1,7 @@
 (library
  (name dune_ai_context)
- (libraries str unix compiler-libs.common sexplib ppx_inline_test)
+ (libraries str unix compiler-libs.common sexplib)
+ (inline_tests)
  (preprocess (pps ppx_inline_test))
- (inline_tests true))
+ )
+
