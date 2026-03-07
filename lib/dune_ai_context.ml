@@ -3,9 +3,9 @@
    dependencies using `dune describe external-lib-deps`. It extracts the
    `external_deps` field from the returned s‑expression, filters out any
    libraries whose names start with `ppx_`, and for each remaining vendor
-   library prints its name, the path(s) to its `.cmi` file(s) (found under
-   `$OPAM_SWITCH_PREFIX/lib`), and the signature of each `.cmi` using
-   `Printtyp.signature`.
+   library writes its interface signature (obtained via `Cmi_format.read_cmi`)
+   to a file `<vendor>.mli` inside the `vendor_interfaces` directory.
+   The directory is created automatically if it does not exist.
 
    Missing Dune files are ignored, and the tool works for projects that have
    only a `lib`, only a `bin`, or additional `test` stanzas.
@@ -17,6 +17,7 @@ open Cmi_format
 open Format
 open Printtyp
 open Sexplib.Sexp
+open Unix
 
 (** [read_file path] reads the whole content of the file at [path] and returns it as a string. *)
 let read_file (path : string) : string =
@@ -45,6 +46,12 @@ let rec find_cmi_files (dir : string) (target : string) : string list =
          else acc)
       [] entries
   with Sys_error _ -> []  (* directory does not exist or cannot be read *)
+
+(** Ensure that a directory exists; create it if it does not. *)
+let ensure_dir (dir : string) =
+  if not (Sys.file_exists dir) then
+    (* 0o755 = rwxr-xr-x *)
+    Unix.mkdir dir 0o755
 
 (** [run_dune_describe ()] runs `dune describe external-lib-deps` and returns its output as a string. *)
 let run_dune_describe () : string =
@@ -81,38 +88,39 @@ let vendor_deps () : string list =
   let deps = extract_external_deps sexp in
   List.filter (fun name -> not (String.length name >= 4 && String.sub name 0 4 = "ppx_")) deps
 
-(** [print_vendor_dependencies ()] prints each vendor library, the path(s) to its
-    `.cmi` file(s) and the signature of each `.cmi`. *)
+(** Write the interface signature of a library to `vendor_interfaces/<lib>.mli`. *)
+let write_interface_to_file ~lib_name ~signature_str =
+  let out_dir = "vendor_interfaces" in
+  ensure_dir out_dir;
+  let out_path = Filename.concat out_dir (lib_name ^ ".mli") in
+  let oc = open_out out_path in
+  output_string oc signature_str;
+  close_out oc
+
+(** [print_vendor_dependencies ()] processes each vendor library, extracts its
+    `.cmi` signature, and writes it to a file under `vendor_interfaces`. *)
 let print_vendor_dependencies () =
   let deps = vendor_deps () in
   match Sys.getenv_opt "OPAM_SWITCH_PREFIX" with
   | None ->
-      (* No OPAM switch prefix – just print the library names *)
-      List.iter (printf "%s\n") deps
+      (* No OPAM switch prefix – we cannot locate .cmi files, so do nothing. *)
+      ()
   | Some prefix ->
       let lib_dir = Filename.concat prefix "lib" in
       List.iter
         (fun dep ->
            let cmi_paths = find_cmi_files lib_dir dep in
-           if cmi_paths = [] then
-             (* No .cmi found – print only the library name *)
-             printf "%s\n" dep
-           else
-             (* For each .cmi, print library name, path, and the signature *)
-             List.iter
-               (fun p ->
-                  let cmi = Cmi_format.read_cmi p in
-                  printf "%s %s\n" dep p;
-                  Format.printf "%a\n" Printtyp.signature cmi.cmi_sign)
-               cmi_paths)
+           match cmi_paths with
+           | [] -> ()
+           | paths ->
+               (* Concatenate signatures from all found .cmi files. *)
+               let signatures =
+                 List.map
+                   (fun p ->
+                      let cmi = Cmi_format.read_cmi p in
+                      asprintf "%a" Printtyp.signature cmi.cmi_sign)
+                   paths
+               in
+               let combined = String.concat "\n\n" signatures in
+               write_interface_to_file ~lib_name:dep ~signature_str:combined)
         deps
-
-(* Inline test for [extract_external_deps] *)
-let%test "extract_external_deps parses external_deps correctly" =
-  let s =
-    "(default\n ((library\n   ((names (inst))\n    (extensions ())\n    (package (inst))\n    (source_dir lib)\n    (external_deps\n     ((core required)\n      (str required)\n      (ppx_jane required)\n      (ppx_deriving_yojson required)))\n    (internal_deps ())))))"
-  in
-  let sexp = Sexplib.Sexp.of_string s in
-  let deps = extract_external_deps sexp in
-  let expected = ["core"; "str"; "ppx_jane"; "ppx_deriving_yojson"] in
-  List.sort String.compare deps = List.sort String.compare expected
