@@ -32,3 +32,69 @@ The project depends on the following OPAM packages:
 
 You can install the tool directly from the repository:
 
+```sh
+git clone https://github.com/zenfey/dune-ai-context
+cd dune-ai-context
+opam pin add dune-ai-context .
+opam install dune-ai-context
+```
+
+## Building from source
+
+If you prefer to build manually with `dune`:
+
+```sh
+dune build
+```
+
+The executable will be built as `_build/default/bin/dune_ai_context.exe`
+(and installed as `dune-ai-context` when you run `dune install`).
+
+## Usage
+
+Assuming your OCaml project that uses Dune is located at `<proj-root>`:
+
+* Run the tool from the project root:
+
+```sh
+cd <proj-root>
+dune-ai-context
+```
+
+* Or invoke it with the project directory as an argument:
+
+```sh
+dune-ai-context <proj-root>
+```
+
+The command will create a `vendor_interfaces` directory inside the current
+working directory (or inside `<proj-root>` if you passed it as an argument) and
+populate it with `<library>.mli` files containing the exported signatures.
+
+### Environment variable
+
+`dune‑ai‑context` relies on the `OPAM_SWITCH_PREFIX` environment variable to
+locate the compiled libraries. Ensure it is set (it is automatically set when
+you are inside an OPAM switch). If the variable is not present the tool will
+skip the `.cmi` lookup.
+
+## Testing
+
+The project includes an inline test for the `extract_external_deps` function
+using `ppx_inline_test`. Run the tests with:
+
+```sh
+dune runtest
+```
+
+## License
+
+MIT – see the `LICENSE` file for details.
+
+## Contributing
+
+Feel free to open issues or submit pull requests on the GitHub repository:
+
+<https://github.com/zenfey/dune-ai-context>
+
+
