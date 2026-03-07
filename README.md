@@ -23,7 +23,7 @@ external dependencies themselves.
 
 The project depends on the following OPAM packages:
 
-* `dune` (≥ 3.21)
+* `dune` (≥ 3.1)
 * `ocaml`
 * `sexplib`
 * `str`

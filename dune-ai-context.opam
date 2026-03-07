@@ -9,7 +9,7 @@ homepage: "https://github.com/zenfey/dune-ai-context"
 doc: "https://github.com/zenfey/dune-ai-context"
 bug-reports: "https://github.com/zenfey/dune-ai-context/issues"
 depends: [
-  "dune" {>= "3.21"}
+  "dune" {>= "3.1"}
   "ocaml"
   "odoc" {with-doc}
 ]
