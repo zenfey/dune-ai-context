@@ -61,30 +61,17 @@ let run_dune_describe () : string =
 
 (** [extract_external_deps sexp] walks the s‑expression returned by `dune describe`
     and returns a list of library names appearing in the `external_deps` field. *)
-let rec extract_external_deps (sexp : t) : string list =
-  match sexp with
-  | List (_default :: libs) ->
-      (* `libs` is a list of library specifications *)
-      List.concat_map
-        (function
-          | List fields ->
-              (* Find the field whose first atom is "external_deps" *)
-              (match List.find_opt
-                       (function
-                         | List (Atom "external_deps" :: _) -> true
-                         | _ -> false)
-                       fields with
-               | Some (List (_atom :: deps)) ->
-                   (* `deps` is a list like ((core required) (str required) ...) *)
-                   List.fold_left
-                     (fun acc -> function
-                       | List [Atom name; _required] -> name :: acc
-                       | _ -> acc)
-                     [] deps
-               | _ -> [])
-          | _ -> [])
-        libs
-  | _ -> []
+let extract_external_deps (sexp : t) : string list =
+  let rec find_external = function
+    | List (Atom "external_deps" :: List deps :: _) ->
+        List.map
+          (function
+            | List (Atom name :: _) -> name
+            | _ -> failwith "unexpected")
+          deps
+    | List l -> List.concat_map find_external l
+    | Atom _ -> [] in
+  find_external sexp
 
 (** [vendor_deps ()] obtains the list of external vendor libraries, filtering out any
     that start with `ppx_`. *)
