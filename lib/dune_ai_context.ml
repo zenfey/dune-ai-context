@@ -11,13 +11,9 @@
    only a `lib`, only a `bin`, or additional `test` stanzas.
 *)
 
-open Printf
-open Str
 open Cmi_format
 open Format
-open Printtyp
 open Sexplib.Sexp
-open Unix
 
 (** [read_file path] reads the whole content of the file at [path] and returns it as a string. *)
 let read_file (path : string) : string =
