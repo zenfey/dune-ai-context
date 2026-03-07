@@ -15,7 +15,7 @@
   files to provide more accurate suggestions.
 
 The tool is useful when you need to inspect or export the public API of the
-third‑party libraries used by a project, and when you want to give AI coding
+third‑party libraries used in a project, and when you want to give AI coding
 assistants full visibility of those APIs without requiring them to resolve
 external dependencies themselves.
 
