@@ -83,7 +83,7 @@ let rec extract_external_deps (sexp : t) : string list =
                      [] deps
                | _ -> [])
           | _ -> [])
-        (match libs with List l -> l | _ -> [])
+        libs
   | _ -> []
 
 (** [vendor_deps ()] obtains the list of external vendor libraries, filtering out any
