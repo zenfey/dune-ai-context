@@ -21,8 +21,6 @@
  (depends
   (ocaml (>= 4.14))
   (dune (>= 3.1))
-  sexplib
-  str
-  unix)
+  sexplib)
  (tags
   ("ocaml" "dune" "cmi" "interfaces" "ai")))

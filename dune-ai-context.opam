@@ -15,8 +15,6 @@ depends: [
   "ocaml" {>= "4.14"}
   "dune" {>= "3.1" & >= "3.1"}
   "sexplib"
-  "str"
-  "unix"
   "odoc" {with-doc}
 ]
 build: [
