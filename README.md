@@ -24,11 +24,10 @@ external dependencies themselves.
 The project depends on the following OPAM packages:
 
 * `dune` (≥ 3.1)
-* `ocaml`
+* `ocaml` (≥ 4.14)
 * `sexplib`
 * `str`
 * `unix`
-* `compiler-libs.common`
 
 You can install the tool directly from the repository:
 
