@@ -77,8 +77,7 @@ skip the `.cmi` lookup.
 
 ## Testing
 
-The project includes an inline test for the `extract_external_deps` function
-using `ppx_inline_test`. Run the tests with:
+There are currently no inline tests. Run the tests with:
 
 ```sh
 dune runtest
