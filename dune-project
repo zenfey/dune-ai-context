@@ -2,7 +2,7 @@
 
 (name dune-ai-context)
 
-(generate_opam_files true)
+(generate_opam_files false)
 
 (source
  (github zenfey/dune-ai-context))
